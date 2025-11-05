@@ -5,6 +5,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_pwa_demo/utils/router.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'services/notification_service.dart';
 import 'features/home_screen.dart';
 import 'features/profile_screen.dart';
 import 'features/settings_screen.dart';
@@ -20,6 +21,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   usePathUrlStrategy();
+  await NotificationService.initialize();
 
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   runApp(const MyPwaApp());
@@ -46,10 +48,17 @@ class MyPwaApp extends StatelessWidget {
           minTextAdapt: true,
           splitScreenMode: true,
           builder: (context, child) {
+            final baseScheme = ColorScheme.fromSeed(seedColor: const Color(0xFF0EA5E9));
+            final colorScheme = baseScheme.copyWith(
+              primary: const Color(0xFF0EA5E9), // blue/cyan
+              secondary: const Color(0xFF10B981), // teal/green
+              tertiary: const Color(0xFF22D3EE),
+            );
+
             return MaterialApp.router(
               title: 'Flutter PWA + ScreenUtil Demo',
               debugShowCheckedModeBanner: false,
-              theme: ThemeData(colorSchemeSeed: Colors.blue, useMaterial3: true),
+              theme: ThemeData(useMaterial3: true, colorScheme: colorScheme),
               routerConfig: router,
             );
           },
@@ -128,13 +137,14 @@ class _ResponsiveHomeState extends State<ResponsiveHome> {
       appBar: AppBar(
         title: Text('Flutter PWA Responsive', style: TextStyle(fontSize: 20.sp)),
         centerTitle: true,
+        backgroundColor: Theme.of(context).colorScheme.primary,
       ),
       body: Row(
         children: [
           if (isDesktop)
             Container(
               width: 200.w,
-              color: Colors.blue.shade50,
+              color: Theme.of(context).colorScheme.primary.withOpacity(0.08),
               child: Column(
                 children: [
                   SizedBox(height: 40.h),
@@ -161,15 +171,15 @@ class _ResponsiveHomeState extends State<ResponsiveHome> {
     return InkWell(
       onTap: () => setState(() => _index = index),
       child: Container(
-        color: selected ? Colors.blue.shade100 : Colors.transparent,
+        color: selected ? Theme.of(context).colorScheme.primary.withOpacity(0.12) : Colors.transparent,
         padding: EdgeInsets.symmetric(vertical: 12.h, horizontal: 16.w),
         child: Row(
           children: [
-            Icon(icon, color: selected ? Colors.blue : Colors.black54, size: 22.sp),
+            Icon(icon, color: selected ? Theme.of(context).colorScheme.primary : Colors.black54, size: 22.sp),
             SizedBox(width: 10.w),
             Text(
               label,
-              style: TextStyle(fontSize: 16.sp, color: selected ? Colors.blue : Colors.black87),
+              style: TextStyle(fontSize: 16.sp, color: selected ? Theme.of(context).colorScheme.primary : Colors.black87),
             ),
           ],
         ),

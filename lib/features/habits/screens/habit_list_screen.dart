@@ -42,7 +42,7 @@ class HabitListScreen extends StatelessWidget {
                   child: ListTile(
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     leading: IconButton(
-                      icon: const Icon(Icons.check_circle_outline, color: Colors.green),
+                      icon: Icon(Icons.check_circle_outline, color: Theme.of(context).colorScheme.secondary),
                       onPressed: () {
                         context.read<HabitCubit>().addHabitInstance(habit.id, habit.userId);
                       },

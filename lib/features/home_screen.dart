@@ -29,7 +29,10 @@ class HomeScreen extends StatelessWidget {
                     width: double.infinity,
                     padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 24.h),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(colors: [Color(0xFF0EA5E9), Color(0xFF0EA5E9)]),
+                      gradient: LinearGradient(colors: [
+                        Theme.of(context).colorScheme.primary,
+                        Theme.of(context).colorScheme.primary.withOpacity(0.9),
+                      ]),
                       borderRadius: BorderRadius.circular(16.r),
                     ),
                     child: Column(
@@ -107,8 +110,8 @@ Widget _homeActionCard(
         children: [
           Container(
             padding: EdgeInsets.all(10.w),
-            decoration: BoxDecoration(color: const Color(0xFFE0F2FE), borderRadius: BorderRadius.circular(12.r)),
-            child: Icon(icon, color: const Color(0xFF0EA5E9), size: 22.w),
+            decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary.withOpacity(0.12), borderRadius: BorderRadius.circular(12.r)),
+            child: Icon(icon, color: Theme.of(context).colorScheme.primary, size: 22.w),
           ),
           SizedBox(width: 12.w),
           Expanded(

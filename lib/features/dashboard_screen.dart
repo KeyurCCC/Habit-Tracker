@@ -33,7 +33,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
-      appBar: AppBar(title: const Text("Habit Dashboard"), backgroundColor: Colors.blueAccent),
+      appBar: AppBar(title: const Text("Habit Dashboard"), backgroundColor: Theme.of(context).colorScheme.primary),
       body: SafeArea(
         child: BlocBuilder<HabitCubit, HabitState>(
           builder: (context, state) {
@@ -144,7 +144,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     barRods: [
                                       BarChartRodData(
                                         toY: habits[i].streak.toDouble(),
-                                        color: Colors.blueAccent,
+                                        color: Theme.of(context).colorScheme.primary,
                                         width: 16,
                                         borderRadius: BorderRadius.circular(4),
                                       ),
@@ -199,9 +199,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               lineBarsData: [
                                 LineChartBarData(
                                   isCurved: true,
-                                  color: Colors.green,
+                                  color: Theme.of(context).colorScheme.secondary,
                                   dotData: const FlDotData(show: false),
-                                  belowBarData: BarAreaData(show: true, color: Colors.green.withOpacity(0.15)),
+                                  belowBarData: BarAreaData(show: true, color: Theme.of(context).colorScheme.secondary.withOpacity(0.15)),
                                   spots: _buildLast7DaySpots(instances),
                                 ),
                               ],

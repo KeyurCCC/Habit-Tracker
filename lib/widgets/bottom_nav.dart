@@ -14,7 +14,7 @@ class BottomNav extends StatelessWidget {
       onTap: onTap,
       selectedFontSize: 14.sp,
       unselectedFontSize: 13.sp,
-      selectedItemColor: const Color(0xFF0EA5E9),
+      selectedItemColor: Theme.of(context).colorScheme.primary,
       unselectedItemColor: Colors.black54,
       showUnselectedLabels: true,
       items: const [
