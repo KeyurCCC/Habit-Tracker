@@ -5,6 +5,8 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:go_router/go_router.dart';
 import '../../../models/habit_model.dart';
 import '../../../models/habit_instance_model.dart';
+import '../../../services/gemini_service.dart';
+import '../../../services/daily_suggestion_service.dart';
 import 'habits/cubits/habit_cubit.dart';
 import 'habits/cubits/habit_event.dart';
 import 'habits/cubits/habit_state.dart';
@@ -21,19 +23,60 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   late final String userId;
   int _rangeDays = 7; // 7 or 30
+  bool _isGeneratingSummary = false;
+  String? _currentSummary;
 
   @override
   void initState() {
     super.initState();
     userId = FirebaseAuth.instance.currentUser!.uid;
     context.read<HabitCubit>().handleEvent(LoadHabitsEvent(userId));
+    
+    // Auto-generate daily suggestion when dashboard loads (once per day)
+    _checkAndSendDailySuggestion();
+  }
+
+  Future<void> _checkAndSendDailySuggestion() async {
+    try {
+      await DailySuggestionService.generateAndNotifyWithCheck();
+    } catch (e) {
+      // Fail silently - don't interrupt user experience
+      print('Auto-suggestion error: $e');
+    }
+  }
+
+  Future<void> _requestDailySuggestion() async {
+    try {
+      await DailySuggestionService.generateAndNotifyDailySuggestions();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('💡 Daily suggestion sent!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
-      appBar: AppBar(title: const Text("Habit Dashboard"), backgroundColor: Theme.of(context).colorScheme.primary),
+      appBar: AppBar(
+        title: const Text("Habit Dashboard"),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.lightbulb_outline),
+            tooltip: 'Get Daily Suggestion',
+            onPressed: _requestDailySuggestion,
+          ),
+        ],
+      ),
       body: SafeArea(
         child: BlocBuilder<HabitCubit, HabitState>(
           builder: (context, state) {
@@ -75,6 +118,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ],
                       ),
                       const SizedBox(height: 24),
+
+                      // ===== AI Daily Summary =====
+                      _dailySummaryCard(),
+                      const SizedBox(height: 16),
 
                       // ===== Filter Chips & Completion Rate =====
                       Row(
@@ -150,60 +197,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       ),
                                     ],
                                   ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                      ],
-
-                      // ===== Last 7 Days Completion (Line Chart) =====
-                      if (instances.isNotEmpty) ...[
-                        const Text(
-                          "Completions - Last 7 Days",
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 12),
-                        Container(
-                          height: 220,
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: LineChart(
-                            LineChartData(
-                              gridData: const FlGridData(show: true),
-                              borderData: FlBorderData(show: false),
-                              titlesData: FlTitlesData(
-                                leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 36)),
-                                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                                topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                                bottomTitles: AxisTitles(
-                                  sideTitles: SideTitles(
-                                    showTitles: true,
-                                    reservedSize: 42,
-                                    getTitlesWidget: (value, meta) {
-                                      final idx = value.toInt();
-                                      if (idx < 0 || idx > 6) return const SizedBox.shrink();
-                                      final day = DateTime.now().subtract(Duration(days: 6 - idx));
-                                      final label = "${day.month}/${day.day}";
-                                      return Padding(
-                                        padding: const EdgeInsets.only(top: 6),
-                                        child: Text(label, style: const TextStyle(fontSize: 10)),
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ),
-                              lineBarsData: [
-                                LineChartBarData(
-                                  isCurved: true,
-                                  color: Theme.of(context).colorScheme.secondary,
-                                  dotData: const FlDotData(show: false),
-                                  belowBarData: BarAreaData(show: true, color: Theme.of(context).colorScheme.secondary.withOpacity(0.15)),
-                                  spots: _buildLast7DaySpots(instances),
-                                ),
                               ],
                             ),
                           ),
@@ -299,25 +292,88 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  List<FlSpot> _buildLast7DaySpots(List<HabitInstanceModel> instances) {
-    final now = DateTime.now();
-    // Build a map for last 7 days index -> count
-    final Map<int, int> dayIndexToCount = {for (int i = 0; i < 7; i++) i: 0};
+  Future<void> _generateSummary() async {
+    setState(() {
+      _isGeneratingSummary = true;
+      _currentSummary = null; // Clear previous summary while generating
+    });
 
-    for (final inst in instances) {
-      if (!inst.completed) continue;
-      final d = inst.date;
-      final diffDays = now.difference(DateTime(d.year, d.month, d.day)).inDays;
-      if (diffDays >= 0 && diffDays < 7) {
-        // x axis from 0..6 left->right oldest->newest
-        final x = 6 - diffDays;
-        dayIndexToCount[x] = (dayIndexToCount[x] ?? 0) + 1;
+    try {
+      // Get current habits from state
+      final state = context.read<HabitCubit>().state;
+      if (state is! HabitLoadedState) {
+        throw Exception('Please wait for habits to load');
+      }
+
+      final habits = state.habits;
+      if (habits.isEmpty) {
+        throw Exception('No habits found. Add some habits first!');
+      }
+
+      // Generate summary using Gemini (no Firestore save)
+      final summary = await GeminiService.generateDailySummary(userId: userId, habits: habits);
+
+      if (mounted) {
+        setState(() {
+          _currentSummary = summary;
+          _isGeneratingSummary = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Summary generated successfully!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isGeneratingSummary = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.red),
+        );
       }
     }
+  }
 
-    return [
-      for (int i = 0; i < 7; i++) FlSpot(i.toDouble(), (dayIndexToCount[i] ?? 0).toDouble()),
-    ];
+  Widget _dailySummaryCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                '🧠 AI Daily Summary',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              IconButton(
+                icon: _isGeneratingSummary
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.refresh),
+                onPressed: _isGeneratingSummary ? null : _generateSummary,
+                tooltip: 'Generate new summary',
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (_currentSummary != null)
+            Text(_currentSummary!)
+          else
+            Column(
+              children: [
+                const Text('No AI daily summary yet. Click generate to get your personalized summary!'),
+                const SizedBox(height: 12),
+                ElevatedButton.icon(
+                  onPressed: _isGeneratingSummary ? null : _generateSummary,
+                  icon: const Icon(Icons.auto_awesome),
+                  label: const Text('Generate Summary'),
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
   }
 
   Widget _completionRateCard(List<HabitInstanceModel> instances, List<HabitModel> habits, int days) {
