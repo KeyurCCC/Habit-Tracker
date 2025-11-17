@@ -91,12 +91,15 @@ class LoginScreen extends StatelessWidget {
                           // Login button
                           SizedBox(
                             width: double.infinity,
-                            height: 48.h,
+                            height: 52.h,
                             child: ElevatedButton(
                               onPressed: () {},
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blue,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                                backgroundColor: Theme.of(context).colorScheme.primary,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12.r),
+                                ),
+                                elevation: 0,
                               ),
                               child: Text(
                                 "Login",
@@ -107,20 +110,39 @@ class LoginScreen extends StatelessWidget {
                           SizedBox(height: 20.h),
                           BlocConsumer<GoogleSignInCubit, GoogleSignInState>(
                             builder: (_, signInWithGoogleState) {
-                              return OutlinedButton.icon(
-                                style: OutlinedButton.styleFrom(padding: EdgeInsetsGeometry.all(10.sp)),
-                                onPressed: (signInWithGoogleState is GoogleSignInLoadingState)
-                                    ? null
-                                    : () {
-                                        context.read<GoogleSignInCubit>().googleSignIn();
-                                      },
-                                icon: signInWithGoogleState is GoogleSignInLoadingState
-                                    ? ButtonLoadingIndicator()
-                                    : Image.asset(ImagesPath.googleLogo, height: 15.sp, width: 15.sp),
-                                label: Text(
-                                  signInWithGoogleState is GoogleSignInLoadingState
-                                      ? ''
-                                      : StringConstants.lblLoginWithGoogle,
+                              return SizedBox(
+                                width: double.infinity,
+                                height: 52.h,
+                                child: OutlinedButton.icon(
+                                  style: OutlinedButton.styleFrom(
+                                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+                                    side: BorderSide(color: Colors.grey.shade300, width: 1.5),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12.r),
+                                    ),
+                                  ),
+                                  onPressed: (signInWithGoogleState is GoogleSignInLoadingState)
+                                      ? null
+                                      : () {
+                                          context.read<GoogleSignInCubit>().googleSignIn();
+                                        },
+                                  icon: signInWithGoogleState is GoogleSignInLoadingState
+                                      ? SizedBox(
+                                          width: 20.sp,
+                                          height: 20.sp,
+                                          child: CircularProgressIndicator(strokeWidth: 2),
+                                        )
+                                      : Image.asset(ImagesPath.googleLogo, height: 20.sp, width: 20.sp),
+                                  label: Text(
+                                    signInWithGoogleState is GoogleSignInLoadingState
+                                        ? 'Signing in...'
+                                        : StringConstants.lblLoginWithGoogle,
+                                    style: TextStyle(
+                                      fontSize: 16.sp,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.grey.shade800,
+                                    ),
+                                  ),
                                 ),
                               );
                             },

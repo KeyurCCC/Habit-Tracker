@@ -167,22 +167,39 @@ class HabitCubit extends Cubit<HabitState> {
     DateTime? prevDate;
 
     for (var doc in snapshot.docs) {
-      final date = (doc['date'] as Timestamp).toDate();
+      final dateValue = doc['date'];
+      late DateTime date;
+      
+      if (dateValue is Timestamp) {
+        date = dateValue.toDate();
+      } else if (dateValue is String) {
+        date = DateTime.parse(dateValue);
+      } else {
+        continue;
+      }
+
+      // Normalize to midnight for proper day comparison
+      date = DateTime(date.year, date.month, date.day);
+      
       final completed = doc['completed'] ?? false;
 
       if (!completed) continue;
 
       if (prevDate == null) {
         streak = 1;
+        prevDate = date;
       } else {
         final diff = prevDate.difference(date).inDays;
         if (diff == 1) {
+          // Consecutive day
           streak++;
+          prevDate = date;
         } else if (diff > 1) {
-          break; // streak broken
+          // Gap found - streak broken
+          break;
         }
+        // if diff == 0, skip duplicate date entry
       }
-      prevDate = date;
     }
 
     await _firestore.collection('habits').doc(habitId).update({'streak': streak});

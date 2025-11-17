@@ -40,8 +40,27 @@ class _GeminiChatScreenState extends State<GeminiChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
-      appBar: AppBar(title: const Text("💬 Gemini Chat"), backgroundColor: Colors.grey[500], centerTitle: true),
+      backgroundColor: const Color(0xFFF5F7FA),
+      appBar: AppBar(
+        elevation: 0,
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.auto_awesome_rounded, size: 20),
+            ),
+            const SizedBox(width: 12),
+            const Text("AI Coach", style: TextStyle(fontWeight: FontWeight.bold)),
+          ],
+        ),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        centerTitle: true,
+      ),
       body: SafeArea(
         child: Column(
           children: [
@@ -79,18 +98,26 @@ class _GeminiChatScreenState extends State<GeminiChatScreen> {
                             margin: EdgeInsets.symmetric(vertical: 6.h),
                             padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
                             decoration: BoxDecoration(
-                              color: isUser ? Colors.grey[500] : Colors.white,
+                              gradient: isUser
+                                  ? LinearGradient(
+                                      colors: [
+                                        Theme.of(context).colorScheme.primary,
+                                        Theme.of(context).colorScheme.tertiary,
+                                      ],
+                                    )
+                                  : null,
+                              color: isUser ? null : Colors.white,
                               borderRadius: BorderRadius.only(
-                                topLeft: Radius.circular(16.r),
-                                topRight: Radius.circular(16.r),
-                                bottomLeft: Radius.circular(isUser ? 16.r : 4.r),
-                                bottomRight: Radius.circular(isUser ? 4.r : 16.r),
+                                topLeft: Radius.circular(20.r),
+                                topRight: Radius.circular(20.r),
+                                bottomLeft: Radius.circular(isUser ? 20.r : 4.r),
+                                bottomRight: Radius.circular(isUser ? 4.r : 20.r),
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
-                                  blurRadius: 3,
-                                  offset: const Offset(0, 1),
+                                  color: Colors.black.withOpacity(0.08),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
                                 ),
                               ],
                             ),
@@ -110,20 +137,37 @@ class _GeminiChatScreenState extends State<GeminiChatScreen> {
                         child: Container(
                           constraints: BoxConstraints(maxWidth: 0.75.sw),
                           margin: EdgeInsets.symmetric(vertical: 6.h),
-                          padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
-                          decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(16.r)),
+                          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20.r),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               SizedBox(
-                                width: 18.w,
-                                height: 18.w,
-                                child: const CircularProgressIndicator(strokeWidth: 2),
+                                width: 20.w,
+                                height: 20.w,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
                               ),
-                              SizedBox(width: 10.w),
+                              SizedBox(width: 12.w),
                               Text(
-                                "Gemini is thinking...",
-                                style: TextStyle(fontSize: 14.sp, color: Colors.black54),
+                                "AI Coach is thinking...",
+                                style: TextStyle(
+                                  fontSize: 14.sp,
+                                  color: Colors.grey.shade700,
+                                  fontStyle: FontStyle.italic,
+                                ),
                               ),
                             ],
                           ),
@@ -135,38 +179,81 @@ class _GeminiChatScreenState extends State<GeminiChatScreen> {
               ),
             ),
             // Input area
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 10.h),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _controller,
-                      style: TextStyle(fontSize: 16.sp),
-                      decoration: InputDecoration(
-                        hintText: "Ask anything",
-                        filled: true,
-                        fillColor: Colors.white,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(30.r),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                      onSubmitted: (_) => _sendMessage(context),
-                    ),
-                  ),
-                  SizedBox(width: 8.w),
-                  InkWell(
-                    onTap: () => _sendMessage(context),
-                    borderRadius: BorderRadius.circular(50.r),
-                    child: CircleAvatar(
-                      radius: 25.r,
-                      backgroundColor: Colors.grey[500],
-                      child: Icon(Icons.send, color: Colors.white, size: 22.sp),
-                    ),
+            Container(
+              padding: EdgeInsets.all(16.w),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, -2),
                   ),
                 ],
+              ),
+              child: SafeArea(
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _controller,
+                        style: TextStyle(fontSize: 16.sp),
+                        decoration: InputDecoration(
+                          hintText: "Ask your AI coach anything...",
+                          filled: true,
+                          fillColor: Colors.grey.shade50,
+                          contentPadding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 14.h),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30.r),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30.r),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30.r),
+                            borderSide: BorderSide(
+                              color: Theme.of(context).colorScheme.primary,
+                              width: 2,
+                            ),
+                          ),
+                        ),
+                        onSubmitted: (_) => _sendMessage(context),
+                      ),
+                    ),
+                    SizedBox(width: 12.w),
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Theme.of(context).colorScheme.primary,
+                            Theme.of(context).colorScheme.tertiary,
+                          ],
+                        ),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () => _sendMessage(context),
+                          borderRadius: BorderRadius.circular(50.r),
+                          child: Container(
+                            padding: EdgeInsets.all(14.w),
+                            child: Icon(Icons.send_rounded, color: Colors.white, size: 24.sp),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],

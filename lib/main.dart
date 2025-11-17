@@ -3,12 +3,15 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_pwa_demo/utils/router.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'services/notification_service.dart';
+import 'services/firestore_service.dart';
 import 'features/home_screen.dart';
 import 'features/profile_screen.dart';
 import 'features/settings_screen.dart';
+import 'features/habits/cubits/habit_cubit.dart';
 import 'firebase_options.dart';
 import 'widgets/bottom_nav.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
@@ -32,39 +35,42 @@ class MyPwaApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final double width = constraints.maxWidth;
+    return BlocProvider<HabitCubit>(
+      create: (context) => HabitCubit(firestoreService: FirestoreService()),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final double width = constraints.maxWidth;
 
-        final Size designSize;
+          final Size designSize;
 
-        if (width < 600) {
-          designSize = const Size(360, 640);
-        } else {
-          designSize = const Size(1440, 900);
-        }
-        return ScreenUtilInit(
-          designSize: designSize,
-          minTextAdapt: true,
-          splitScreenMode: true,
-          builder: (context, child) {
-            final baseScheme = ColorScheme.fromSeed(seedColor: const Color(0xFF0EA5E9));
-            final colorScheme = baseScheme.copyWith(
-              primary: const Color(0xFF0EA5E9), // blue/cyan
-              secondary: const Color(0xFF10B981), // teal/green
-              tertiary: const Color(0xFF22D3EE),
-            );
+          if (width < 600) {
+            designSize = const Size(360, 640);
+          } else {
+            designSize = const Size(1440, 900);
+          }
+          return ScreenUtilInit(
+            designSize: designSize,
+            minTextAdapt: true,
+            splitScreenMode: true,
+            builder: (context, child) {
+              final baseScheme = ColorScheme.fromSeed(seedColor: const Color(0xFF0EA5E9));
+              final colorScheme = baseScheme.copyWith(
+                primary: const Color(0xFF0EA5E9), // blue/cyan
+                secondary: const Color(0xFF10B981), // teal/green
+                tertiary: const Color(0xFF22D3EE),
+              );
 
-            return MaterialApp.router(
-              title: 'Flutter PWA + ScreenUtil Demo',
-              debugShowCheckedModeBanner: false,
-              theme: ThemeData(useMaterial3: true, colorScheme: colorScheme),
-              routerConfig: router,
-            );
-          },
-          child: const ResponsiveHome(),
-        );
-      },
+              return MaterialApp.router(
+                title: 'Flutter PWA + ScreenUtil Demo',
+                debugShowCheckedModeBanner: false,
+                theme: ThemeData(useMaterial3: true, colorScheme: colorScheme),
+                routerConfig: router,
+              );
+            },
+            child: const ResponsiveHome(),
+          );
+        },
+      ),
     );
   }
 }
@@ -159,7 +165,12 @@ class _ResponsiveHomeState extends State<ResponsiveHome> {
                 ],
               ),
             ),
-          Expanded(child: _pages[_index]),
+          Expanded(
+            child: Container(
+              color: const Color(0xFFF5F7FA),
+              child: _pages[_index],
+            ),
+          ),
         ],
       ),
       bottomNavigationBar: isDesktop ? null : BottomNav(index: _index, onTap: (i) => setState(() => _index = i)),
