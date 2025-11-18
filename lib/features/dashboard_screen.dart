@@ -84,6 +84,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
             margin: const EdgeInsets.only(right: 8),
             decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(10)),
             child: IconButton(
+              icon: const Icon(Icons.notifications_active_outlined),
+              tooltip: 'View Scheduled Reminders',
+              onPressed: () => context.go('/scheduledNotifications'),
+            ),
+          ),
+          Container(
+            margin: const EdgeInsets.only(right: 8),
+            decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(10)),
+            child: IconButton(
+              icon: const Icon(Icons.settings_outlined),
+              tooltip: 'Notification Settings',
+              onPressed: () => context.go('/notificationSettings'),
+            ),
+          ),
+          Container(
+            margin: const EdgeInsets.only(right: 8),
+            decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(10)),
+            child: IconButton(
               icon: const Icon(Icons.lightbulb_outline),
               tooltip: 'Get Daily Suggestion',
               onPressed: _requestDailySuggestion,
@@ -613,14 +631,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final isMobile = MediaQuery.of(context).size.width < 600;
     final now = DateTime.now();
     final since = DateTime(now.year, now.month, now.day).subtract(Duration(days: days - 1));
-    final completed = instances.where((i) {
-      if (!i.completed) return false;
+    // Count unique days with at least one completion in range
+    final Set<String> completedDays = {};
+    for (final i in instances) {
+      if (!i.completed) continue;
       final d = DateTime(i.date.year, i.date.month, i.date.day);
-      return d.isAfter(since.subtract(const Duration(days: 1))) && d.isBefore(now.add(const Duration(days: 1)));
-    }).length;
-    // Theoretical opportunities: each habit per day
-    final opportunities = habits.length * days;
-    final rate = opportunities == 0 ? 0.0 : (completed / opportunities);
+      if (!d.isBefore(since) && !d.isAfter(now)) {
+        completedDays.add('${d.year}-${d.month}-${d.day}');
+      }
+    }
+    final completed = completedDays.length;
+    final rate = days == 0 ? 0.0 : (completed / days);
     return Container(
       padding: EdgeInsets.all(isMobile ? 12.w : 16.w),
       decoration: BoxDecoration(
@@ -677,7 +698,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 SizedBox(height: 4.h),
                 Text(
-                  '$completed of $opportunities in $days days',
+                  '$completed of $days days',
                   style: TextStyle(color: Colors.grey.shade600, fontSize: isMobile ? 10.sp : 12.sp),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -990,8 +1011,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildInsightsCard(BuildContext context, List<HabitModel> habits, List<HabitInstanceModel> instances) {
     final isMobile = MediaQuery.of(context).size.width < 600;
     
-    // Find best habit (highest streak)
+    // Find best habit (highest current streak)
     final bestHabit = habits.isNotEmpty ? habits.reduce((a, b) => a.streak > b.streak ? a : b) : null;
+
+    // Find personal best across habits (longestStreak)
+    final bestPersonalHabit = habits.isNotEmpty ? habits.reduce((a, b) => a.longestStreak > b.longestStreak ? a : b) : null;
+    final bestPersonal = bestPersonalHabit?.longestStreak ?? 0;
     
     // Calculate average streak
     final avgStreak = habits.isNotEmpty ? (habits.fold<int>(0, (sum, h) => sum + h.streak) / habits.length).round() : 0;
@@ -1063,6 +1088,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
             subtitle: 'Average across all habits',
             color: Colors.green,
           ),
+          SizedBox(height: 10.h),
+          if (bestPersonalHabit != null)
+            _insightRow(
+              context,
+              icon: Icons.emoji_events_outlined,
+              label: 'Personal Best',
+              value: bestPersonalHabit.title,
+              subtitle: '${bestPersonal} day best',
+              color: Colors.deepOrange,
+            ),
           SizedBox(height: 10.h),
           _insightRow(
             context,

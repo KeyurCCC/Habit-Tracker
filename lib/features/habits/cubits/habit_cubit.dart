@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../models/habit_model.dart';
 import '../../../models/habit_instance_model.dart';
+import '../../../models/notification_preference.dart';
 import '../../../services/firestore_service.dart';
 import '../../../services/notification_service.dart';
 import '../../../utils/streak_calculator.dart';
@@ -55,12 +56,15 @@ class HabitCubit extends Cubit<HabitState> {
             targetCount: habit.targetCount,
             completedCount: habit.completedCount,
             streak: streak, // updated
+            longestStreak: habit.longestStreak,
             lastCompletedAt: habit.lastCompletedAt,
             createdAt: habit.createdAt,
           );
         }).toList();
 
         emit(HabitLoadedState(updatedHabits, instances));
+        // Schedule reminders in background (fire-and-forget, no awaiting)
+        _scheduleStreakReminders(updatedHabits, instances, userId!);
       } catch (e) {
         emit(HabitErrorState(e.toString()));
       }
@@ -89,16 +93,91 @@ class HabitCubit extends Cubit<HabitState> {
           goalType: habit.goalType,
           targetCount: habit.targetCount,
           completedCount: habit.completedCount,
-          streak: streak,
-          lastCompletedAt: habit.lastCompletedAt,
-          createdAt: habit.createdAt,
+            streak: streak,
+            longestStreak: habit.longestStreak,
+            lastCompletedAt: habit.lastCompletedAt,
+            createdAt: habit.createdAt,
         );
       }).toList();
 
       emit(HabitLoadedState(updatedHabits, instances));
+      // Schedule reminders in background (fire-and-forget, no awaiting)
+      _scheduleStreakReminders(updatedHabits, instances, userId);
     } catch (e) {
       emit(HabitErrorState(e.toString()));
     }
+  }
+
+  void _scheduleStreakReminders(List<HabitModel> habits, List<HabitInstanceModel> instances, String userId) {
+    // Fire-and-forget: schedule reminders in background without blocking
+    Future.microtask(() async {
+      try {
+        // Fetch user's notification preferences
+        final preferences = await firestoreService.getNotificationPreference(userId);
+
+        if (!preferences.enabledReminders) {
+          // Cancel all scheduled notifications if reminders disabled
+          for (final habit in habits) {
+            final idEvening = _notificationIdFor(habit.id, 21, 0);
+            final idLate = _notificationIdFor(habit.id, 23, 55);
+            await NotificationService.cancelNotification(idEvening);
+            await NotificationService.cancelNotification(idLate);
+          }
+          return;
+        }
+
+        for (final habit in habits) {
+          try {
+            final habitInstances = instances.where((i) => i.habitId == habit.id).toList();
+            final now = DateTime.now();
+            final completedToday = habitInstances.any((i) {
+              final d = i.date;
+              return i.completed && d.year == now.year && d.month == now.month && d.day == now.day;
+            });
+
+            final shouldRemind = (habit.streak > 0) && !completedToday;
+            final idEvening = _notificationIdFor(habit.id, preferences.eveningReminderHour, preferences.eveningReminderMinute);
+            final idLate = _notificationIdFor(habit.id, preferences.lateReminderHour, preferences.lateReminderMinute);
+
+            if (shouldRemind) {
+              // Cancel existing first to avoid duplicates
+              await NotificationService.cancelNotification(idEvening);
+              await NotificationService.cancelNotification(idLate);
+
+              // Schedule evening reminder with user preference time
+              await NotificationService.scheduleDailyReminder(
+                id: idEvening,
+                title: 'Keep your streak 🔥',
+                body: 'Complete "${habit.title}" by ${preferences.eveningReminderHour.toString().padLeft(2, '0')}:${preferences.eveningReminderMinute.toString().padLeft(2, '0')} to keep your ${habit.streak}-day streak!',
+                hour: preferences.eveningReminderHour,
+                minute: preferences.eveningReminderMinute,
+              );
+
+              // Schedule late reminder with user preference time
+              await NotificationService.scheduleDailyReminder(
+                id: idLate,
+                title: 'Final chance to save your streak',
+                body: 'Final reminder: complete "${habit.title}" before midnight to keep your ${habit.streak}-day streak!',
+                hour: preferences.lateReminderHour,
+                minute: preferences.lateReminderMinute,
+              );
+            } else {
+              // Cancel any existing reminders for this habit
+              await NotificationService.cancelNotification(idEvening);
+              await NotificationService.cancelNotification(idLate);
+            }
+          } catch (e) {
+            print('Error scheduling reminders for ${habit.id}: $e');
+          }
+        }
+      } catch (e) {
+        print('Error fetching notification preferences: $e');
+      }
+    });
+  }
+
+  int _notificationIdFor(String habitId, int hour, int minute) {
+    return habitId.hashCode ^ (hour << 8) ^ minute;
   }
 
   Future<void> _addHabit(Map<String, dynamic> habitData) async {
@@ -202,7 +281,15 @@ class HabitCubit extends Cubit<HabitState> {
       }
     }
 
-    await _firestore.collection('habits').doc(habitId).update({'streak': streak});
+    final habitDocRef = _firestore.collection('habits').doc(habitId);
+    final habitDoc = await habitDocRef.get();
+    final currentLongest = habitDoc.data()?['longestStreak'] ?? 0;
+
+    if (streak > currentLongest) {
+      await habitDocRef.update({'streak': streak, 'longestStreak': streak});
+    } else {
+      await habitDocRef.update({'streak': streak});
+    }
   }
 
   @override

@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/habit_model.dart';
 import '../models/habit_instance_model.dart';
+import '../models/notification_preference.dart';
 
 class FirestoreService {
   final _firestore = FirebaseFirestore.instance;
@@ -28,5 +29,27 @@ class FirestoreService {
     }
 
     return allInstances;
+  }
+
+  Future<NotificationPreference> getNotificationPreference(String userId) async {
+    try {
+      final doc = await _firestore.collection('users').doc(userId).collection('settings').doc('notifications').get();
+      if (doc.exists) {
+        return NotificationPreference.fromMap(doc.data()!);
+      }
+      // Return defaults if not found
+      return NotificationPreference();
+    } catch (e) {
+      return NotificationPreference();
+    }
+  }
+
+  Future<void> setNotificationPreference(String userId, NotificationPreference preference) async {
+    await _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('settings')
+        .doc('notifications')
+        .set(preference.toMap());
   }
 }

@@ -7,6 +7,8 @@ import 'package:flutter_pwa_demo/features/habits/cubits/habit_cubit.dart';
 import 'package:flutter_pwa_demo/features/habits/screens/add_habit_screen.dart';
 import 'package:flutter_pwa_demo/features/login/cubits/google_sign_in_cubit.dart';
 import 'package:flutter_pwa_demo/features/login/screens/login_screen.dart';
+import 'package:flutter_pwa_demo/features/settings/notification_settings_screen.dart';
+import 'package:flutter_pwa_demo/features/settings/scheduled_notifications_screen.dart';
 import 'package:flutter_pwa_demo/services/firestore_service.dart';
 import 'package:go_router/go_router.dart';
 
@@ -91,6 +93,19 @@ final GoRouter router = GoRouter(
           ),
         );
       },
+    ),
+    GoRoute(
+      path: NotificationSettingsScreen.routeName,
+      pageBuilder: (context, state) => const NoTransitionPage(child: NotificationSettingsScreen()),
+    ),
+    GoRoute(
+      path: ScheduledNotificationsScreen.routeName,
+      pageBuilder: (context, state) => NoTransitionPage(
+        child: MultiBlocProvider(
+          providers: [BlocProvider<HabitCubit>(create: (_) => HabitCubit(firestoreService: FirestoreService()))],
+          child: const ScheduledNotificationsScreen(),
+        ),
+      ),
     ),
   ],
 );

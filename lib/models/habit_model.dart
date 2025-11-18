@@ -9,6 +9,7 @@ class HabitModel {
   final int targetCount;
   final int completedCount;
   final int streak;
+  final int longestStreak;
   final Timestamp lastCompletedAt;
   final Timestamp createdAt;
 
@@ -21,6 +22,7 @@ class HabitModel {
     required this.targetCount,
     required this.completedCount,
     required this.streak,
+    required this.longestStreak,
     required this.lastCompletedAt,
     required this.createdAt,
   });
@@ -34,6 +36,7 @@ class HabitModel {
     'targetCount': targetCount,
     'completedCount': completedCount,
     'streak': streak,
+    'longestStreak': longestStreak,
     'lastCompletedAt': lastCompletedAt,
     'createdAt': createdAt,
   };
@@ -48,6 +51,7 @@ class HabitModel {
       targetCount: map['targetCount'] ?? 1,
       completedCount: map['completedCount'] ?? 0,
       streak: map['streak'] ?? 0,
+      longestStreak: map['longestStreak'] ?? 0,
       lastCompletedAt: map['lastCompletedAt'] ?? Timestamp.now(),
       createdAt: map['createdAt'] ?? Timestamp.now(),
     );

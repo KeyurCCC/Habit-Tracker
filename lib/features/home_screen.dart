@@ -5,6 +5,8 @@ import 'package:flutter_pwa_demo/features/dashboard_screen.dart';
 import 'package:flutter_pwa_demo/features/geminiChat/screens/gemini_chat_screen.dart';
 import 'package:flutter_pwa_demo/features/habits/screens/habit_list_screen.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_pwa_demo/widgets/flame_animation.dart';
+import 'package:flutter_pwa_demo/widgets/streak_badge.dart';
 import 'package:go_router/go_router.dart';
 import 'habits/screens/add_habit_screen.dart';
 import 'habits/cubits/habit_cubit.dart';
@@ -193,6 +195,7 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icons.local_fire_department,
             value: totalStreak.toString(),
             label: 'Day Streak',
+            trailing: FlameAnimation(size: 18),
             color: const Color(0xFFFF6B6B),
           ),
         ),
@@ -226,6 +229,7 @@ class _HomeScreenState extends State<HomeScreen> {
     required String value,
     required String label,
     required Color color,
+    Widget? trailing,
   }) {
     return Container(
       padding: EdgeInsets.all(12.w),
@@ -242,9 +246,18 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Icon(icon, color: color, size: 18.sp),
           ),
           SizedBox(height: 8.h),
-          Text(
-            value,
-            style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold, color: Colors.grey.shade800),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                value,
+                style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold, color: Colors.grey.shade800),
+              ),
+              if (trailing != null) ...[
+                SizedBox(width: 8.w),
+                trailing,
+              ]
+            ],
           ),
           SizedBox(height: 2.h),
           Text(

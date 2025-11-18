@@ -64,6 +64,9 @@ class HabitInstanceModel {
       dateTime = DateTime.now();
     }
 
+    // Normalize to local midnight to avoid timezone/date-shift issues when comparing dates
+    dateTime = DateTime(dateTime.year, dateTime.month, dateTime.day);
+
     return HabitInstanceModel(
       id: id,
       habitId: data['habitId'] ?? '',

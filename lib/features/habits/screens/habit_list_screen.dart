@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_pwa_demo/widgets/flame_animation.dart';
+import 'package:flutter_pwa_demo/widgets/streak_badge.dart';
 import '../cubits/habit_cubit.dart';
 import '../cubits/habit_event.dart';
 import '../cubits/habit_state.dart';
@@ -242,26 +244,40 @@ class HabitListScreen extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 16),
-                Row(
-                  children: [
-                    _buildStatChip(
-                      context,
-                      Icons.local_fire_department_rounded,
-                      '${habit.streak}',
-                      'day streak',
-                      Colors.orange,
-                    ),
-                    const SizedBox(width: 12),
-                    _buildStatChip(
-                      context,
-                      Icons.track_changes_rounded,
-                      '${habit.targetCount}',
-                      'target',
-                      Theme.of(context).colorScheme.secondary,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _buildStatChip(
+                        context,
+                        Icons.local_fire_department_rounded,
+                        '${habit.streak}',
+                        'day streak',
+                        Colors.orange,
+                      ),
+                      if (habitInstances.any((i) {
+                        final d = i.date;
+                        final now = DateTime.now();
+                        return i.completed && d.year == now.year && d.month == now.month && d.day == now.day;
+                      }))
+                        const FlameAnimation(size: 18, color: Colors.orange),
+                      StreakBadge(longestStreak: habit.longestStreak ?? 0),
+                      _buildStatChip(
+                        context,
+                        Icons.track_changes_rounded,
+                        '${habit.targetCount}',
+                        'target',
+                        Theme.of(context).colorScheme.secondary,
+                      ),
+                    ],
+                  ),
+                const SizedBox(height: 8),
+                // Explicit current / personal best display
+                  Text(
+                    'Streak: ${habit.streak} / Best: ${habit.longestStreak}',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.grey.shade800),
+                  ),
+                const SizedBox(height: 8),
                 Row(
                   children: [
                     Text(
@@ -339,35 +355,39 @@ class HabitListScreen extends StatelessWidget {
 
 Widget _sevenDayStrip(List habitInstances) {
   final now = DateTime.now();
-  final days = List.generate(7, (idx) {
-    final day = DateTime(now.year, now.month, now.day).subtract(Duration(days: 6 - idx));
-    final done = habitInstances.any((i) {
+  // Build a list of the actual DateTime objects for the last 7 days (oldest -> newest)
+  final dateList = List.generate(7, (idx) => DateTime(now.year, now.month, now.day).subtract(Duration(days: 6 - idx)));
+
+  // Determine completion for each date
+  final doneList = dateList.map((day) {
+    return habitInstances.any((i) {
       final d = i.date;
       return i.completed && d.year == day.year && d.month == day.month && d.day == day.day;
     });
-    return done;
-  });
+  }).toList();
+
+  const weekdayLetters = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
   return Row(
     children: [
-      for (int i = 0; i < days.length; i++) ...[
+      for (int i = 0; i < dateList.length; i++)
         Container(
           width: 32,
           height: 32,
           margin: const EdgeInsets.symmetric(horizontal: 2),
           decoration: BoxDecoration(
-            color: days[i] ? const Color(0xFF51CF66) : Colors.grey.shade200,
+            color: doneList[i] ? const Color(0xFF51CF66) : Colors.grey.shade200,
             shape: BoxShape.circle,
             border: Border.all(
-              color: days[i] ? const Color(0xFF51CF66) : Colors.grey.shade300,
+              color: doneList[i] ? const Color(0xFF51CF66) : Colors.grey.shade300,
               width: 2,
             ),
           ),
-          child: days[i]
+          child: doneList[i]
               ? const Icon(Icons.check, color: Colors.white, size: 18)
               : Center(
                   child: Text(
-                    ['S', 'M', 'T', 'W', 'T', 'F', 'S'][i],
+                    weekdayLetters[dateList[i].weekday % 7],
                     style: TextStyle(
                       fontSize: 10,
                       color: Colors.grey.shade500,
@@ -376,7 +396,6 @@ Widget _sevenDayStrip(List habitInstances) {
                   ),
                 ),
         ),
-      ]
     ],
   );
 }
